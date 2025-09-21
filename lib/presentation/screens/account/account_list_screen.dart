@@ -230,7 +230,7 @@ class _AccountCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              NumberFormatter.formatCurrency(account.balance),
+              NumberFormatter.formatCurrency(account.balance, currency: NumberFormatter.getCurrentCurrency()),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

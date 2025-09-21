@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingresos_costos_app/data/database/database_helper.dart';
 import 'package:ingresos_costos_app/data/repositories/work_location_repository.dart';
 import 'package:ingresos_costos_app/data/repositories/account_repository.dart';
+import 'package:ingresos_costos_app/data/repositories/reminder_repository.dart';
+import 'package:ingresos_costos_app/data/repositories/savings_goal_repository.dart';
 import 'presentation/screens/trading_home_screen.dart';
 import 'data/repositories/category_repository.dart';
 import 'domain/usecases/category/manage_category_usecase.dart';
@@ -10,8 +12,11 @@ import 'services/notification_service.dart';
 import 'services/notification_handler.dart';
 import 'presentation/screens/work_location/work_location_form_screen.dart';
 import 'presentation/screens/work_location/work_locations_list_screen.dart';
+import 'presentation/screens/savings_goal/savings_goal_list_screen.dart';
 import 'presentation/providers/work_location_riverpod_provider.dart';
 import 'presentation/providers/account_provider.dart';
+import 'presentation/providers/reminder_provider.dart';
+import 'presentation/providers/savings_goal_provider.dart';
 import 'presentation/theme/trading_theme.dart';
 
 void main() async {
@@ -75,6 +80,8 @@ class _MyAppState extends State<MyApp> {
     final dbHelper = DatabaseHelper.instance;
     final workLocationRepository = WorkLocationRepositoryImpl(dbHelper: dbHelper);
     final accountRepository = AccountRepository();
+    final reminderRepository = ReminderRepository();
+    final savingsGoalRepository = SavingsGoalRepository();
     
     return ProviderScope(
       overrides: [
@@ -88,6 +95,16 @@ class _MyAppState extends State<MyApp> {
             accountRepository: accountRepository,
           ),
         ),
+        reminderProvider.overrideWith(
+          (ref) => ReminderNotifier(
+            reminderRepository: reminderRepository,
+          ),
+        ),
+        savingsGoalProvider.overrideWith(
+          (ref) => SavingsGoalNotifier(
+            savingsGoalRepository: savingsGoalRepository,
+          ),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -98,6 +115,7 @@ class _MyAppState extends State<MyApp> {
         routes: {
           '/work-location-form': (context) => const WorkLocationFormScreen(userId: 1),
           '/work-locations-list': (context) => const WorkLocationsListScreen(userId: 1),
+          '/savings-goals-list': (context) => const SavingsGoalListScreen(userId: 1),
         },
       ),
     );

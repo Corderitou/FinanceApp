@@ -337,7 +337,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                           ),
                         ),
                         Text(
-                          '${_getAccountTypeLabel(account.type)} • ${NumberFormatter.formatCurrency(account.balance)}',
+                          '${_getAccountTypeLabel(account.type)} • ${NumberFormatter.formatCurrency(account.balance, currency: NumberFormatter.getCurrentCurrency())}',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.grey,

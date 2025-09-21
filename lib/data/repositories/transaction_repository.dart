@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/transaction.dart' as model;
 import '../../domain/entities/transaction.dart' as entity;
@@ -44,6 +45,23 @@ class TransactionRepository {
     });
   }
 
+  Future<List<model.Transaction>> getTransactionsByUserAndDateRange(int userId, DateTime startDate, DateTime endDate) async {
+    final db = await dbProvider.db;
+    final String startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+    final String endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+    
+    final List<Map<String, dynamic>> maps = await db.query(
+      'transactions',
+      where: 'user_id = ? AND date BETWEEN ? AND ?',
+      whereArgs: [userId, startDateStr, endDateStr],
+      orderBy: 'date DESC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return model.Transaction.fromMap(maps[i]);
+    });
+  }
+
   Future<List<model.Transaction>> getTransactionsByAccount(int accountId) async {
     final db = await dbProvider.db;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -65,7 +83,8 @@ class TransactionRepository {
       [userId, 'income'],
     );
 
-    return result[0]['total'] as double? ?? 0.0;
+    if (result.isEmpty) return 0.0;
+    return (result[0]['total'] as num?)?.toDouble() ?? 0.0;
   }
 
   Future<double> getTotalExpenseByUser(int userId) async {
@@ -75,7 +94,36 @@ class TransactionRepository {
       [userId, 'expense'],
     );
 
-    return result[0]['total'] as double? ?? 0.0;
+    if (result.isEmpty) return 0.0;
+    return (result[0]['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalIncomeByUserAndDateRange(int userId, DateTime startDate, DateTime endDate) async {
+    final db = await dbProvider.db;
+    final String startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+    final String endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+    
+    final result = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM transactions WHERE user_id = ? AND type = ? AND date BETWEEN ? AND ?',
+      [userId, 'income', startDateStr, endDateStr],
+    );
+
+    if (result.isEmpty) return 0.0;
+    return (result[0]['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalExpenseByUserAndDateRange(int userId, DateTime startDate, DateTime endDate) async {
+    final db = await dbProvider.db;
+    final String startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+    final String endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+    
+    final result = await db.rawQuery(
+      'SELECT SUM(amount) as total FROM transactions WHERE user_id = ? AND type = ? AND date BETWEEN ? AND ?',
+      [userId, 'expense', startDateStr, endDateStr],
+    );
+
+    if (result.isEmpty) return 0.0;
+    return (result[0]['total'] as num?)?.toDouble() ?? 0.0;
   }
 
   Future<List<Map<String, dynamic>>> getCategoryExpensesReport(

@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingresos_costos_app/presentation/theme/trading_theme.dart';
 import 'package:ingresos_costos_app/presentation/utils/number_formatter.dart';
+import 'package:intl/intl.dart';
 import 'transaction_form_screen.dart';
 import 'account/account_list_screen.dart';
 import 'reports/reports_dashboard_screen.dart';
 import 'budget_list_screen.dart';
 import 'work_location/work_locations_list_screen.dart';
 import 'work_location/work_location_form_screen.dart';
+import 'reminder/reminder_list_screen.dart';
 import '../../domain/entities/category.dart';
+import '../../data/repositories/transaction_repository.dart';
+import '../../presentation/providers/account_provider.dart';
 
 class TradingHomeScreen extends ConsumerStatefulWidget {
   const TradingHomeScreen({Key? key}) : super(key: key);
@@ -48,13 +52,13 @@ class _TradingHomeScreenState extends ConsumerState<TradingHomeScreen> {
     ),
   ];
 
-  static List<Widget> _widgetOptions(List<Category> categories) {
+  static List<Widget> _widgetOptions(List<Category> categories, BuildContext context) {
     return [
       const _TradingDashboard(),
       const AccountListScreen(userId: 1),
       ReportsDashboardScreen(userId: 1, categories: categories),
       const WorkLocationsListScreen(userId: 1),
-      BudgetListScreen(userId: 1, categories: categories),
+      ReminderListScreen(userId: 1),
     ];
   }
 
@@ -67,7 +71,7 @@ class _TradingHomeScreenState extends ConsumerState<TradingHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _widgetOptions(mockCategories).elementAt(_selectedIndex),
+      body: _widgetOptions(mockCategories, context).elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -87,8 +91,8 @@ class _TradingHomeScreenState extends ConsumerState<TradingHomeScreen> {
             label: 'Trabajo',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Presupuesto',
+            icon: Icon(Icons.notifications),
+            label: 'Recordatorios',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -103,6 +107,9 @@ class _TradingDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Load accounts when the widget is built
+    ref.read(accountProvider.notifier).loadAccounts(1); // Assuming user ID 1 for now
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Finanzas Personales'),
@@ -150,84 +157,349 @@ class _TradingDashboard extends ConsumerWidget {
   }
 }
 
-class _StatusImmediateSection extends ConsumerWidget {
+// Enumeración para los diferentes períodos de tiempo
+enum TimePeriod {
+  oneDay('1 día', 1),
+  sevenDays('7 días', 7),
+  oneMonth('1 mes', 30),
+  sixMonths('6 meses', 180),
+  oneYear('1 año', 365);
+
+  const TimePeriod(this.label, this.days);
+  final String label;
+  final int days;
+}
+
+class _StatusImmediateSection extends ConsumerStatefulWidget {
   const _StatusImmediateSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: Obtener el saldo total de todas las cuentas y el PNL del día
-    // Por ahora usamos valores mock
-    final double totalBalance = 12450.75;
-    final double dailyPnL = 245.50;
-    final double dailyPnLPercentage = 2.1;
+  _StatusImmediateSectionState createState() => _StatusImmediateSectionState();
+}
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Saldo Total',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF909090),
+class _StatusImmediateSectionState extends ConsumerState<_StatusImmediateSection> {
+  TimePeriod _selectedPeriod = TimePeriod.sevenDays;
+
+  Future<Map<String, double>> _calculatePnL(int userId, double totalBalance, TimePeriod period) async {
+    try {
+      final transactionRepository = TransactionRepository();
+      
+      // Calculate date range based on selected period
+      final now = DateTime.now();
+      final startDate = now.subtract(Duration(days: period.days));
+      
+      // Get transactions for the selected period
+      final transactions = await transactionRepository.getTransactionsByUserAndDateRange(
+        userId, 
+        startDate, 
+        now
+      );
+      
+      // Calculate total income and expenses
+      double totalIncome = 0.0;
+      double totalExpenses = 0.0;
+      
+      for (var transaction in transactions) {
+        if (transaction.type == 'income') {
+          totalIncome += transaction.amount;
+        } else if (transaction.type == 'expense') {
+          totalExpenses += transaction.amount;
+        }
+      }
+      
+      // Calculate PnL and percentage
+      final double pnl = totalIncome - totalExpenses;
+      // Fix the percentage calculation to be based on the total balance
+      final double percentage = (totalBalance > 0) 
+          ? (pnl / totalBalance) * 100 
+          : 0.0;
+      
+      return {
+        'pnl': pnl,
+        'percentage': percentage,
+      };
+    } catch (e) {
+      // Return default values in case of error
+      return {
+        'pnl': 0.0,
+        'percentage': 0.0,
+      };
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Get accounts from provider
+    final accountState = ref.watch(accountProvider);
+    
+    // Calculate total balance from all accounts
+    final double totalBalance = accountState.accounts.fold(0.0, (sum, account) => sum + account.balance);
+    
+    // Calculate PnL for the selected period
+    return FutureBuilder<Map<String, double>>(
+      future: _calculatePnL(1, totalBalance, _selectedPeriod), // Assuming user ID 1 for now
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            NumberFormatter.formatCurrency(totalBalance),
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: dailyPnL >= 0 
-                      ? TradingTheme.profitGreen.withOpacity(0.2)
-                      : TradingTheme.lossRed.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Saldo Total',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF909090),
+                  ),
                 ),
-                child: Row(
+                SizedBox(height: 8),
+                Text(
+                  '\$0.00',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Row(
                   children: [
-                    Icon(
-                      dailyPnL >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                      color: dailyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
-                      size: 16,
-                    ),
-                    SizedBox(width: 4),
                     Text(
-                      '${dailyPnL >= 0 ? '+' : ''}${NumberFormatter.formatCurrency(dailyPnL)} (${dailyPnLPercentage.toStringAsFixed(1)}%)',
+                      'Cargando...',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: dailyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
+                        color: Color(0xFF909090),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
+              ],
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          // Handle error case with zero values instead of mock data
+          final double weeklyPnL = 0.0;
+          final double weeklyPnLPercentage = 0.0;
+
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Saldo Total',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF909090),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  NumberFormatter.formatCurrency(totalBalance, currency: NumberFormatter.getCurrentCurrency()),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: weeklyPnL >= 0 
+                            ? TradingTheme.profitGreen.withOpacity(0.2)
+                            : TradingTheme.lossRed.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            weeklyPnL >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                            color: weeklyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
+                            size: 16,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '${weeklyPnL >= 0 ? '+' : ''}${NumberFormatter.formatCurrency(weeklyPnL, currency: NumberFormatter.getCurrentCurrency())} (${weeklyPnLPercentage.toStringAsFixed(1)}%)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: weeklyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () {
+                        // Show a dialog or bottom sheet to select the time period
+                        _showPeriodSelector(context);
+                      },
+                      child: Row(
+                        children: [
+                          Text(
+                            _selectedPeriod.label,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF909090),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            color: Color(0xFF909090),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        final data = snapshot.data!;
+        final double weeklyPnL = data['pnl']!;
+        final double weeklyPnLPercentage = data['percentage']!;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const Text(
-                'Hoy',
+                'Saldo Total',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: Color(0xFF909090),
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                NumberFormatter.formatCurrency(totalBalance, currency: NumberFormatter.getCurrentCurrency()),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: weeklyPnL >= 0 
+                          ? TradingTheme.profitGreen.withOpacity(0.2)
+                          : TradingTheme.lossRed.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          weeklyPnL >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                          color: weeklyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
+                          size: 16,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          '${weeklyPnL >= 0 ? '+' : ''}${NumberFormatter.formatCurrency(weeklyPnL, currency: NumberFormatter.getCurrentCurrency())} (${weeklyPnLPercentage.toStringAsFixed(1)}%)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: weeklyPnL >= 0 ? TradingTheme.profitGreen : TradingTheme.lossRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () {
+                      // Show a dialog or bottom sheet to select the time period
+                      _showPeriodSelector(context);
+                    },
+                    child: Row(
+                      children: [
+                        Text(
+                          _selectedPeriod.label,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF909090),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          color: Color(0xFF909090),
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  void _showPeriodSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Seleccionar período',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...TimePeriod.values.map((period) {
+                return ListTile(
+                  title: Text(period.label),
+                  selected: _selectedPeriod == period,
+                  selectedTileColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedPeriod = period;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -292,11 +564,11 @@ class _QuickActionsSection extends StatelessWidget {
               },
             ),
             _QuickActionButton(
-              icon: Icons.bar_chart,
-              label: 'Análisis',
-              color: TradingTheme.accentYellow,
+              icon: Icons.savings,
+              label: 'Ahorros',
+              color: Theme.of(context).colorScheme.primary,
               onTap: () {
-                // Handle analysis
+                Navigator.pushNamed(context, '/savings-goals-list');
               },
             ),
           ],
@@ -679,7 +951,7 @@ class _CategoryItem extends StatelessWidget {
             ),
           ),
           Text(
-            NumberFormatter.formatCurrency(amount.abs()),
+            NumberFormatter.formatCurrency(amount.abs(), currency: NumberFormatter.getCurrentCurrency()),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,

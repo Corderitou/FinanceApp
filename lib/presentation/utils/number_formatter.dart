@@ -1,26 +1,62 @@
 import 'package:intl/intl.dart';
 
 class NumberFormatter {
-  static final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'es_AR', // Argentina locale for Spanish formatting
-    symbol: '\$', // Dollar symbol
-    decimalDigits: 2,
+  // Soporte para múltiples monedas
+  static final Map<String, NumberFormat> _currencyFormats = {
+    'CLP': NumberFormat.currency(
+      locale: 'es_CL',
+      symbol: '\$', // Símbolo de peso chileno
+      decimalDigits: 0, // CLP no usa decimales
+    ),
+    'USD': NumberFormat.currency(
+      locale: 'en_US',
+      symbol: 'US\$', 
+      decimalDigits: 2,
+    ),
+    'EUR': NumberFormat.currency(
+      locale: 'de_DE',
+      symbol: '€',
+      decimalDigits: 2,
+    ),
+    'ARS': NumberFormat.currency(
+      locale: 'es_AR',
+      symbol: '\$',
+      decimalDigits: 2,
+    ),
+  };
+
+  // Formato de moneda compacta para CLP
+  static final NumberFormat _compactCurrencyFormatCLP = NumberFormat.compactSimpleCurrency(
+    locale: 'es_CL',
+    decimalDigits: 0,
   );
 
+  // Formato de moneda compacta para otras monedas
   static final NumberFormat _compactCurrencyFormat = NumberFormat.compactSimpleCurrency(
-    locale: 'es_AR',
+    locale: 'es_CL', // Usamos es_CL como base
     decimalDigits: 2,
   );
 
-  static final NumberFormat _numberFormat = NumberFormat.decimalPattern('es_AR');
+  // Formato numérico general
+  static final NumberFormat _numberFormat = NumberFormat.decimalPattern('es_CL');
 
   /// Formatea un número como moneda con símbolo y separadores
-  static String formatCurrency(double amount) {
-    return _currencyFormat.format(amount);
+  /// Si no se especifica moneda, se usa CLP por defecto
+  static String formatCurrency(double amount, {String currency = 'CLP'}) {
+    final format = _currencyFormats[currency];
+    if (format != null) {
+      return format.format(amount);
+    }
+    // Fallback al formato CLP si la moneda no está soportada
+    return _currencyFormats['CLP']!.format(amount);
   }
 
   /// Formatea un número como moneda compacta (ej. $1.5K)
-  static String formatCompactCurrency(double amount) {
+  /// Para CLP no usamos decimales, para otras monedas sí
+  static String formatCompactCurrency(double amount, {String currency = 'CLP'}) {
+    if (currency == 'CLP') {
+      return _compactCurrencyFormatCLP.format(amount);
+    }
     return _compactCurrencyFormat.format(amount);
   }
 
@@ -31,7 +67,7 @@ class NumberFormatter {
 
   /// Formatea un número como porcentaje
   static String formatPercentage(double value) {
-    final percentFormat = NumberFormat.percentPattern('es_AR');
+    final percentFormat = NumberFormat.percentPattern('es_CL');
     return percentFormat.format(value);
   }
 
@@ -41,5 +77,10 @@ class NumberFormatter {
       ..minimumFractionDigits = decimalDigits
       ..maximumFractionDigits = decimalDigits;
     return decimalFormat.format(value);
+  }
+  
+  /// Obtiene el código de moneda actual (CLP por defecto)
+  static String getCurrentCurrency() {
+    return 'CLP';
   }
 }

@@ -19,7 +19,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3, // Increment version for migration
+      version: 5, // Increment version for migration
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -111,6 +111,40 @@ class DatabaseHelper {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE reminders(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        frequency TEXT NOT NULL, -- daily, weekly, monthly, yearly
+        day_of_week INTEGER, -- 1-7 (Monday-Sunday), null for daily
+        day_of_month INTEGER, -- 1-31, null for daily/weekly
+        month INTEGER, -- 1-12, null for daily/weekly/monthly
+        time TEXT NOT NULL, -- HH:MM format
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE savings_goals(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        target_amount REAL NOT NULL,
+        current_amount REAL NOT NULL DEFAULT 0,
+        target_date TEXT NOT NULL,
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -128,6 +162,44 @@ class DatabaseHelper {
           latitude REAL,
           longitude REAL,
           date TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      // Add the reminders table
+      await db.execute('''
+        CREATE TABLE reminders(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          frequency TEXT NOT NULL, -- daily, weekly, monthly, yearly
+          day_of_week INTEGER, -- 1-7 (Monday-Sunday), null for daily
+          day_of_month INTEGER, -- 1-31, null for daily/weekly
+          month INTEGER, -- 1-12, null for daily/weekly/monthly
+          time TEXT NOT NULL, -- HH:MM format
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      // Add the savings_goals table
+      await db.execute('''
+        CREATE TABLE savings_goals(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          target_amount REAL NOT NULL,
+          current_amount REAL NOT NULL DEFAULT 0,
+          target_date TEXT NOT NULL,
+          is_completed INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
