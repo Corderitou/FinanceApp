@@ -139,6 +139,19 @@ class TransactionRepository {
     ''', [userId]);
   }
 
+  Future<List<Map<String, dynamic>>> getCategoryIncomeReport(
+      int userId) async {
+    final db = await dbProvider.db;
+    return await db.rawQuery('''
+      SELECT c.name, c.color, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      WHERE t.user_id = ? AND t.type = 'income'
+      GROUP BY c.id
+      ORDER BY total DESC
+    ''', [userId]);
+  }
+
   // Update account balance when a transaction is added
   Future<void> updateAccountBalance(int accountId, double amount, String type) async {
     final db = await dbProvider.db;

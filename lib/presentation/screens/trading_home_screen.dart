@@ -12,7 +12,26 @@ import 'work_location/work_location_form_screen.dart';
 import 'reminder/reminder_list_screen.dart';
 import '../../domain/entities/category.dart';
 import '../../data/repositories/transaction_repository.dart';
+import '../../data/repositories/reports/reports_repository.dart';
+import '../../domain/reports/report_models.dart'; // Import report models
 import '../../presentation/providers/account_provider.dart';
+
+// Provider for reports repository
+final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
+  return ReportsRepository();
+});
+
+// Provider for category expenses
+final categoryExpensesProvider = FutureProvider.family<List<CategoryExpense>, int>((ref, userId) async {
+  final repository = ref.read(reportsRepositoryProvider);
+  return repository.getCategoryExpenses(userId);
+});
+
+// Provider for category income
+final categoryIncomeProvider = FutureProvider.family<List<CategoryIncome>, int>((ref, userId) async {
+  final repository = ref.read(reportsRepositoryProvider);
+  return repository.getCategoryIncome(userId);
+});
 
 class TradingHomeScreen extends ConsumerStatefulWidget {
   const TradingHomeScreen({Key? key}) : super(key: key);
@@ -767,51 +786,71 @@ class _MarketExplorationSection extends ConsumerWidget {
 class _ExpenseCategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: Obtener datos reales de gastos por categoría
-    // Por ahora usamos datos mock
-    final List<Map<String, dynamic>> categories = [
-      {
-        'name': 'Comida',
-        'amount': 450.00,
-        'change': 12.5,
-        'isPositive': false,
-      },
-      {
-        'name': 'Transporte',
-        'amount': 230.50,
-        'change': -5.2,
-        'isPositive': true,
-      },
-      {
-        'name': 'Entretenimiento',
-        'amount': 180.75,
-        'change': 8.3,
-        'isPositive': false,
-      },
-      {
-        'name': 'Salud',
-        'amount': 95.25,
-        'change': 0.0,
-        'isPositive': true,
-      },
-    ];
+    // Get real data from the provider instead of using mock data
+    final categoryExpensesAsync = ref.watch(categoryExpensesProvider(1)); // Assuming user ID 1 for now
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _CategoryItem(
-            name: category['name'],
-            amount: category['amount'],
-            change: category['change'],
-            isPositive: category['isPositive'],
+    return categoryExpensesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'No hay gastos registrados',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           );
-        },
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListView.builder(
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return _CategoryItem(
+                name: category.categoryName,
+                amount: category.amount,
+                change: 0.0, // We don't have change data in this simple implementation
+                isPositive: false, // Expenses are negative
+              );
+            },
+          ),
+        );
+      },
+      loading: () => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            'Error al cargar datos: $error',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -820,45 +859,71 @@ class _ExpenseCategoryList extends ConsumerWidget {
 class _IncomeCategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: Obtener datos reales de ingresos por categoría
-    // Por ahora usamos datos mock
-    final List<Map<String, dynamic>> categories = [
-      {
-        'name': 'Salario',
-        'amount': 2500.00,
-        'change': 0.0,
-        'isPositive': true,
-      },
-      {
-        'name': 'Freelance',
-        'amount': 850.50,
-        'change': 15.2,
-        'isPositive': true,
-      },
-      {
-        'name': 'Inversiones',
-        'amount': 320.75,
-        'change': -3.5,
-        'isPositive': false,
-      },
-    ];
+    // Get real data from the provider instead of using mock data
+    final categoryIncomeAsync = ref.watch(categoryIncomeProvider(1)); // Assuming user ID 1 for now
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _CategoryItem(
-            name: category['name'],
-            amount: category['amount'],
-            change: category['change'],
-            isPositive: category['isPositive'],
+    return categoryIncomeAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: Text(
+                'No hay ingresos registrados',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           );
-        },
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListView.builder(
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return _CategoryItem(
+                name: category.categoryName,
+                amount: category.amount,
+                change: 0.0, // We don't have change data in this simple implementation
+                isPositive: true, // Income is positive
+              );
+            },
+          ),
+        );
+      },
+      loading: () => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            'Error al cargar datos: $error',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -867,51 +932,124 @@ class _IncomeCategoryList extends ConsumerWidget {
 class _BalanceCategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: Obtener datos reales de balance por categoría
-    // Por ahora usamos datos mock
-    final List<Map<String, dynamic>> categories = [
-      {
-        'name': 'Comida',
-        'amount': -450.00,
-        'change': 12.5,
-        'isPositive': false,
-      },
-      {
-        'name': 'Transporte',
-        'amount': -230.50,
-        'change': -5.2,
-        'isPositive': true,
-      },
-      {
-        'name': 'Salario',
-        'amount': 2500.00,
-        'change': 0.0,
-        'isPositive': true,
-      },
-      {
-        'name': 'Freelance',
-        'amount': 850.50,
-        'change': 15.2,
-        'isPositive': true,
-      },
-    ];
+    // Get real data from both providers
+    final categoryExpensesAsync = ref.watch(categoryExpensesProvider(1)); // Assuming user ID 1 for now
+    final categoryIncomeAsync = ref.watch(categoryIncomeProvider(1)); // Assuming user ID 1 for now
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
+    // We need to combine both async values to show a combined view
+    return categoryExpensesAsync.when(
+      data: (expenses) {
+        return categoryIncomeAsync.when(
+          data: (income) {
+            // Combine both lists
+            final List<Map<String, dynamic>> combinedCategories = [];
+            
+            // Add expenses (as negative values)
+            for (var expense in expenses) {
+              combinedCategories.add({
+                'name': expense.categoryName,
+                'amount': -(expense.amount), // Negative for expenses
+              });
+            }
+            
+            // Add income (as positive values)
+            for (var inc in income) {
+              combinedCategories.add({
+                'name': inc.categoryName,
+                'amount': inc.amount, // Positive for income
+              });
+            }
+            
+            // Sort by absolute amount (highest first)
+            combinedCategories.sort((a, b) => 
+              (b['amount'] as double).abs().compareTo((a['amount'] as double).abs()));
+            
+            if (combinedCategories.isEmpty) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Text(
+                    'No hay transacciones registradas',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardTheme.color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListView.builder(
+                itemCount: combinedCategories.length,
+                itemBuilder: (context, index) {
+                  final category = combinedCategories[index];
+                  return _CategoryItem(
+                    name: category['name'],
+                    amount: category['amount'],
+                    change: 0.0, // We don't have change data in this simple implementation
+                    isPositive: category['amount'] > 0, // Positive for income, negative for expenses
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, stack) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                'Error al cargar ingresos: $error',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      loading: () => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
       ),
-      child: ListView.builder(
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _CategoryItem(
-            name: category['name'],
-            amount: category['amount'],
-            change: category['change'],
-            isPositive: category['amount'] > 0,
-          );
-        },
+      error: (error, stack) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            'Error al cargar gastos: $error',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -956,37 +1094,6 @@ class _CategoryItem extends StatelessWidget {
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: change > 0
-                  ? (isPositive ? TradingTheme.profitGreen : TradingTheme.lossRed).withOpacity(0.2)
-                  : (isPositive ? TradingTheme.lossRed : TradingTheme.profitGreen).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  change > 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                  size: 12,
-                  color: change > 0
-                      ? (isPositive ? TradingTheme.profitGreen : TradingTheme.lossRed)
-                      : (isPositive ? TradingTheme.lossRed : TradingTheme.profitGreen),
-                ),
-                Text(
-                  '${change.abs().toStringAsFixed(1)}%',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: change > 0
-                        ? (isPositive ? TradingTheme.profitGreen : TradingTheme.lossRed)
-                        : (isPositive ? TradingTheme.lossRed : TradingTheme.profitGreen),
-                  ),
-                ),
-              ],
             ),
           ),
         ],

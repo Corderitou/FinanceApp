@@ -28,6 +28,27 @@ class ReportsRepository {
     }).toList();
   }
 
+  /// Get income by category for a given user
+  Future<List<CategoryIncome>> getCategoryIncome(int userId) async {
+    final db = await dbProvider.db;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+      SELECT c.name, c.color, SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.id
+      WHERE t.user_id = ? AND t.type = 'income'
+      GROUP BY c.id
+      ORDER BY total DESC
+    ''', [userId]);
+
+    return result.map((row) {
+      return CategoryIncome(
+        categoryName: row['name'] as String,
+        amount: row['total'] as double,
+        color: row['color'] as String? ?? '#CCCCCC',
+      );
+    }).toList();
+  }
+
   /// Get income vs expense data for a given period
   Future<IncomeVsExpense> getIncomeVsExpense(
       int userId, DateTime start, DateTime end) async {

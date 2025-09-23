@@ -21,8 +21,10 @@ dependencies:
   printing: ^5.9.1
   path_provider: ^2.0.11
   open_file: ^3.2.1
-  flutter_local_notifications: ^17.0.0
+  flutter_local_notifications: ^19.0.0
   intl: ^0.18.0
+  excel: ^2.1.0
+  flutter_timezone: ^5.0.0
 
 dev_dependencies:
   flutter_test:

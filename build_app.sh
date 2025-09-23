@@ -11,10 +11,10 @@ export PATH="$PATH:$HOME/flutter/bin"
 export ANDROID_HOME=/home/cordero/Android/Sdk
 
 # Clean and get dependencies
-flutter clean
-flutter pub get
+$HOME/flutter/bin/flutter clean
+$HOME/flutter/bin/flutter pub get
 
 # Build APK
-flutter build apk
+$HOME/flutter/bin/flutter build apk
 
 echo "Build completed. APK is located at build/app/outputs/flutter-apk/app-release.apk"

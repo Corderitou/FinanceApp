@@ -3,6 +3,7 @@ import '../database/database_helper.dart';
 import '../models/reminder.dart';
 import '../../domain/entities/reminder.dart';
 import '../../services/notification_service.dart';
+import 'package:flutter/material.dart';
 
 class ReminderRepository {
   final dbProvider = DatabaseHelper.instance;
@@ -12,10 +13,18 @@ class ReminderRepository {
     final db = await dbProvider.db;
     final id = await db.insert('reminders', reminder.toMap());
     
+    debugPrint('Inserted reminder with ID: $id');
+    
     // Schedule notification for the new reminder if it's active
     if (reminder.isActive) {
       final insertedReminder = reminder.copyWith(id: id);
+      debugPrint('Scheduling notification for reminder: ${insertedReminder.name}');
+      
+      // Request exact alarm permission before scheduling
+      await notificationService.requestExactAlarmsPermission();
+      
       await notificationService.scheduleReminderNotification(insertedReminder);
+      debugPrint('Scheduled notification for reminder ID: $id');
     }
     
     return id;
@@ -58,12 +67,21 @@ class ReminderRepository {
       whereArgs: [reminder.id],
     );
     
+    debugPrint('Updated reminder with ID: ${reminder.id}');
+    
     // Update notification for the reminder
     if (reminder.isActive) {
+      debugPrint('Updating notification for reminder: ${reminder.name}');
+      
+      // Request exact alarm permission before scheduling
+      await notificationService.requestExactAlarmsPermission();
+      
       await notificationService.scheduleReminderNotification(reminder);
+      debugPrint('Updated notification for reminder ID: ${reminder.id}');
     } else {
       // Cancel notification if reminder is no longer active
       if (reminder.id != null) {
+        debugPrint('Cancelling notification for reminder ID: ${reminder.id}');
         await notificationService.cancelReminderNotification(reminder.id!);
       }
     }
@@ -75,7 +93,9 @@ class ReminderRepository {
     final db = await dbProvider.db;
     
     // Cancel notification for the reminder
+    debugPrint('Deleting reminder with ID: $id');
     await notificationService.cancelReminderNotification(id);
+    debugPrint('Cancelled notification for reminder ID: $id');
     
     return await db.delete(
       'reminders',

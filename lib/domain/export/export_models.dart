@@ -1,4 +1,4 @@
-enum ExportFormat { csv, pdf }
+enum ExportFormat { csv, pdf, excel }
 
 class ExportOptions {
   final DateTime startDate;

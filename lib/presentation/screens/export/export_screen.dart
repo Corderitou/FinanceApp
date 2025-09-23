@@ -153,6 +153,23 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 },
               ),
               ListTile(
+                title: const Text('Excel (Documento de Excel)'),
+                leading: Radio<ExportFormat>(
+                  value: ExportFormat.excel,
+                  groupValue: _selectedFormat,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedFormat = value!;
+                    });
+                  },
+                ),
+                onTap: () {
+                  setState(() {
+                    _selectedFormat = ExportFormat.excel;
+                  });
+                },
+              ),
+              ListTile(
                 title: const Text('PDF (Documento PDF)'),
                 leading: Radio<ExportFormat>(
                   value: ExportFormat.pdf,

@@ -10,6 +10,18 @@ class CategoryExpense {
   });
 }
 
+class CategoryIncome {
+  final String categoryName;
+  final double amount;
+  final String color;
+
+  CategoryIncome({
+    required this.categoryName,
+    required this.amount,
+    required this.color,
+  });
+}
+
 class IncomeVsExpense {
   final double income;
   final double expense;

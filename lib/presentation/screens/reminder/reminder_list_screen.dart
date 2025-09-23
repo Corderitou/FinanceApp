@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingresos_costos_app/domain/entities/reminder.dart';
 import 'package:ingresos_costos_app/presentation/providers/reminder_provider.dart';
+import 'package:ingresos_costos_app/services/notification_service.dart';
 import 'reminder_form_screen.dart';
 
 class ReminderListScreen extends ConsumerStatefulWidget {
@@ -29,6 +30,14 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
       appBar: AppBar(
         title: const Text('Recordatorios'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.security),
+            onPressed: _checkPermissions,
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_active),
+            onPressed: _showTestNotification,
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -126,6 +135,37 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _showTestNotification() {
+    final notificationService = NotificationService();
+    notificationService.showImmediateNotification();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notificación de prueba enviada'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _checkPermissions() async {
+    final notificationService = NotificationService();
+    
+    // Check notification permissions
+    final notificationPermission = await notificationService.requestNotificationPermissions();
+    
+    // Request exact alarm permissions
+    await notificationService.requestExactAlarmsPermission();
+    
+    String message = 'Permisos de notificación: ' + (notificationPermission ? 'Otorgados' : 'No otorgados') + '\n';
+    message += 'Permisos de alarmas exactas: Solicitados';
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 }

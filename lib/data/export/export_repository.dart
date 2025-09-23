@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:open_file/open_file.dart';
+import 'package:excel/excel.dart';
 import '../../domain/entities/transaction.dart' as entity;
 import '../../data/repositories/transaction_repository.dart';
 import '../../domain/export/export_models.dart';
@@ -35,6 +36,8 @@ class ExportRepository {
 
     if (options.format == ExportFormat.csv) {
       return _exportTransactionsToCsv(transactions, options);
+    } else if (options.format == ExportFormat.excel) {
+      return _exportTransactionsToExcel(transactions, options);
     } else {
       return _exportTransactionsToPdf(transactions, options);
     }
@@ -55,6 +58,13 @@ class ExportRepository {
 
     if (options.format == ExportFormat.csv) {
       return _exportFinancialSummaryToCsv(
+        summary,
+        categoryExpenses,
+        incomeVsExpense,
+        options,
+      );
+    } else if (options.format == ExportFormat.excel) {
+      return _exportFinancialSummaryToExcel(
         summary,
         categoryExpenses,
         incomeVsExpense,
@@ -200,6 +210,53 @@ class ExportRepository {
     );
   }
 
+  /// Export transactions to Excel
+  Future<ExportResult> _exportTransactionsToExcel(
+    List<entity.Transaction> transactions,
+    ExportOptions options,
+  ) async {
+    // Get categories for mapping
+    final categories = await _categoryRepository.getCategoriesByUser(1); // Default user ID
+    final categoryMap = {for (var category in categories) category.id: category};
+
+    // Create Excel document
+    final excel = Excel.createExcel();
+    final sheet = excel['Transacciones'];
+
+    // Add headers if requested
+    if (options.includeHeaders) {
+      sheet.appendRow([
+        'ID',
+        'Fecha',
+        'Tipo',
+        'Categoría',
+        'Monto',
+        'Descripción',
+      ]);
+    }
+
+    // Add transaction data
+    for (var transaction in transactions) {
+      sheet.appendRow([
+        transaction.id?.toString() ?? '',
+        transaction.date.toIso8601String().split('T')[0],
+        transaction.type,
+        categoryMap[transaction.categoryId]?.name ?? 'N/A',
+        transaction.amount.toStringAsFixed(2),
+        transaction.description ?? '',
+      ]);
+    }
+
+    // Save to file
+    final filePath = await _saveToFile(excel, 'transactions', 'xlsx');
+
+    return ExportResult(
+      filePath: filePath,
+      format: ExportFormat.excel,
+      recordCount: transactions.length,
+    );
+  }
+
   /// Export financial summary to CSV
   Future<ExportResult> _exportFinancialSummaryToCsv(
     FinancialSummary summary,
@@ -339,6 +396,48 @@ class ExportRepository {
     );
   }
 
+  /// Export financial summary to Excel
+  Future<ExportResult> _exportFinancialSummaryToExcel(
+    FinancialSummary summary,
+    List<CategoryExpense> categoryExpenses,
+    IncomeVsExpense incomeVsExpense,
+    ExportOptions options,
+  ) async {
+    // Create Excel document
+    final excel = Excel.createExcel();
+    
+    // Add Financial Summary sheet
+    final summarySheet = excel['Resumen Financiero'];
+    summarySheet.appendRow(['Concepto', 'Valor']);
+    summarySheet.appendRow(['Ingresos totales', summary.totalIncome.toStringAsFixed(2)]);
+    summarySheet.appendRow(['Gastos totales', summary.totalExpense.toStringAsFixed(2)]);
+    summarySheet.appendRow(['Balance', summary.balance.toStringAsFixed(2)]);
+    summarySheet.appendRow(['Ingreso promedio', summary.averageIncome.toStringAsFixed(2)]);
+    summarySheet.appendRow(['Gasto promedio', summary.averageExpense.toStringAsFixed(2)]);
+
+    // Add Income vs Expense sheet
+    final incomeVsExpenseSheet = excel['Ingresos vs Gastos'];
+    incomeVsExpenseSheet.appendRow(['Concepto', 'Valor']);
+    incomeVsExpenseSheet.appendRow(['Ingresos', incomeVsExpense.income.toStringAsFixed(2)]);
+    incomeVsExpenseSheet.appendRow(['Gastos', incomeVsExpense.expense.toStringAsFixed(2)]);
+
+    // Add Category Expenses sheet
+    final categoryExpensesSheet = excel['Gastos por Categoría'];
+    categoryExpensesSheet.appendRow(['Categoría', 'Monto']);
+    for (var expense in categoryExpenses) {
+      categoryExpensesSheet.appendRow([expense.categoryName, expense.amount.toStringAsFixed(2)]);
+    }
+
+    // Save to file
+    final filePath = await _saveToFile(excel, 'financial_summary', 'xlsx');
+
+    return ExportResult(
+      filePath: filePath,
+      format: ExportFormat.excel,
+      recordCount: 1, // Single report
+    );
+  }
+
   /// Save content to file
   Future<String> _saveToFile(dynamic content, String baseName, String extension) async {
     final directory = await getApplicationDocumentsDirectory();
@@ -353,6 +452,16 @@ class ExportRepository {
       // For PDF
       final file = File(filePath);
       await file.writeAsBytes(content);
+    } else if (content is Excel) {
+      // For Excel
+      final file = File(filePath);
+      final bytes = content.encode();
+      if (bytes != null) {
+        await file.writeAsBytes(bytes);
+      } else {
+        // If encoding fails, create an empty file
+        await file.writeAsString('');
+      }
     }
 
     return filePath;
