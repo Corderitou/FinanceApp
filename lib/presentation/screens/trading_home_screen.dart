@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingresos_costos_app/presentation/theme/trading_theme.dart';
-import 'package:ingresos_costos_app/presentation/utils/number_formatter.dart';
+import 'package:finanzapp/presentation/theme/trading_theme.dart';
+import 'package:finanzapp/presentation/utils/number_formatter.dart';
 import 'package:intl/intl.dart';
 import 'transaction_form_screen.dart';
 import 'account/account_list_screen.dart';

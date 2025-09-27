@@ -1,6 +1,6 @@
 {
-    "name": "ingresos_costos_new",
-    "short_name": "ingresos_costos_new",
+    "name": "FinanzApp",
+    "short_name": "FinanzApp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,4 +1,4 @@
-import 'package:ingresos_costos_app/domain/entities/work_location.dart';
+import 'package:finanzapp/domain/entities/work_location.dart';
 
 class WorkLocationModel extends WorkLocation {
   WorkLocationModel({

@@ -1,0 +1,8 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#4CAF50" rx="100"/>
+  <g transform="translate(128,128)">
+    <path d="M64,128 L64,0 M64,0 L256,0 L256,128 M256,128 L64,128" stroke="white" stroke-width="32" fill="none"/>
+    <path d="M64,64 L128,128 L256,0" stroke="white" stroke-width="32" fill="none" stroke-linecap="round"/>
+    <text x="160" y="180" font-family="Arial" font-size="64" fill="white">$</text>
+  </g>
+</svg>

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingresos_costos_app/domain/entities/savings_goal.dart';
-import 'package:ingresos_costos_app/presentation/providers/savings_goal_provider.dart';
-import 'package:ingresos_costos_app/presentation/utils/number_formatter.dart';
+import 'package:finanzapp/domain/entities/savings_goal.dart';
+import 'package:finanzapp/presentation/providers/savings_goal_provider.dart';
+import 'package:finanzapp/presentation/utils/number_formatter.dart';
 
 class SavingsGoalFormScreen extends ConsumerStatefulWidget {
   final int userId;

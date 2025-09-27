@@ -1,5 +1,5 @@
-name: ingresos_costos_app
-description: Aplicación de finanzas personales para registrar ingresos y gastos.
+name: finanzapp
+description: App de finanzas personales para gestionar tus ingresos y gastos.
 
 publish_to: 'none'
 

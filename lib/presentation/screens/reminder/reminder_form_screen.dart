@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingresos_costos_app/domain/entities/reminder.dart';
-import 'package:ingresos_costos_app/presentation/providers/reminder_provider.dart';
+import 'package:finanzapp/domain/entities/reminder.dart';
+import 'package:finanzapp/presentation/providers/reminder_provider.dart';
 
 class ReminderFormScreen extends ConsumerStatefulWidget {
   final int userId;

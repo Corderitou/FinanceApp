@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingresos_costos_app/data/database/database_helper.dart';
-import 'package:ingresos_costos_app/data/repositories/work_location_repository.dart';
-import 'package:ingresos_costos_app/data/repositories/account_repository.dart';
-import 'package:ingresos_costos_app/data/repositories/reminder_repository.dart';
-import 'package:ingresos_costos_app/data/repositories/savings_goal_repository.dart';
+import 'package:finanzapp/data/database/database_helper.dart';
+import 'package:finanzapp/data/repositories/work_location_repository.dart';
+import 'package:finanzapp/data/repositories/account_repository.dart';
+import 'package:finanzapp/data/repositories/reminder_repository.dart';
+import 'package:finanzapp/data/repositories/savings_goal_repository.dart';
 import 'presentation/screens/trading_home_screen.dart';
 import 'data/repositories/category_repository.dart';
 import 'domain/usecases/category/manage_category_usecase.dart';

@@ -1,6 +1,6 @@
-import 'package:ingresos_costos_app/data/database/database_helper.dart';
-import 'package:ingresos_costos_app/data/models/work_location.dart';
-import 'package:ingresos_costos_app/domain/entities/work_location.dart';
+import 'package:finanzapp/data/database/database_helper.dart';
+import 'package:finanzapp/data/models/work_location.dart';
+import 'package:finanzapp/domain/entities/work_location.dart';
 
 abstract class WorkLocationRepository {
   Future<List<WorkLocation>> getWorkLocationsByUserId(int userId);

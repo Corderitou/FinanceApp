@@ -1,4 +1,4 @@
-# ingresos_costos_new
+# FinanzApp
 
 A new Flutter project.
 
